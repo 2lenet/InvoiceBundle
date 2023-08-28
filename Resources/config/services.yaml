@@ -1,0 +1,28 @@
+parameters:
+    lle_invoice_number_strategy: '%lle_invoice.invoice_number_strategy_service%'
+    lle_invoice_invoice_repository: '%lle_invoice.invoice_repository%'
+services:
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        public: false
+
+    Lle\InvoiceBundle\NumberStrategy\NumberStrategyInterface:
+        class: '%lle_invoice_number_strategy%'
+
+    Lle\InvoiceBundle\Model\InvoiceRepositoryInterface:
+        class: '%lle_invoice_invoice_repository%'
+
+    Lle\InvoiceBundle\Service\:
+        resource: '../../Service'
+        autoconfigure: true
+
+    Lle\InvoiceBundle\ExporterStrategy\:
+        resource: '../../ExporterStrategy'
+        public: true
+        tags: ['lle_invoice.invoice_exporter']
+
+    Lle\InvoiceBundle\ExporterPaymentStrategy\:
+        resource: '../../ExporterPaymentStrategy'
+        public: true
+        tags: ['lle_invoice.payment_exporter']

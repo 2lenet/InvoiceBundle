@@ -1,0 +1,134 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<rsm:CrossIndustryInvoice xmlns:a="urn:un:unece:uncefact:data:standard:QualifiedDataType:100"
+                          xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"
+                          xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:10"
+                          xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
+                          xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                          xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+    <rsm:ExchangedDocumentContext>
+        <ram:GuidelineSpecifiedDocumentContextParameter>
+            <ram:ID>urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic</ram:ID>
+        </ram:GuidelineSpecifiedDocumentContextParameter>
+    </rsm:ExchangedDocumentContext>
+    <rsm:ExchangedDocument>
+        <ram:ID>{{ invoice.invoiceNumber }}</ram:ID>
+        <ram:TypeCode>{{ data.invoice_type }}</ram:TypeCode> {# 381 AVOIR - 380 FACTURE #}
+        <ram:IssueDateTime>
+            <udt:DateTimeString format="102">{{ invoice.invoiceDate |date("Ymd") }}</udt:DateTimeString>
+        </ram:IssueDateTime>
+        {#   <ram:IncludedNote>
+            <ram:Content>Rechnung gemäß Taxifahrt vom 29.10.2019</ram:Content>
+        </ram:IncludedNote>
+        <ram:IncludedNote>
+            <ram:Content>Taxiunternehmen TX GmbH
+                Lieferantenstraße 20
+                10369 Berlin
+                Deutschland
+                Geschäftsführer: Hans Mustermann
+                Handelsregisternummer: H A 123
+            </ram:Content>
+        </ram:IncludedNote>
+        <ram:IncludedNote>
+            <ram:Content>Unsere GLN: 4000001123452
+                Ihre GLN: 4000001987658
+                Ihre Kundennummer: GE2020211
+            </ram:Content>
+        </ram:IncludedNote>
+        #}
+    </rsm:ExchangedDocument>
+
+    <rsm:SupplyChainTradeTransaction>
+        {% for line in data.lines %}
+            <ram:IncludedSupplyChainTradeLineItem>
+                <ram:AssociatedDocumentLineDocument>
+                    <ram:LineID>{{ loop.index }}</ram:LineID>
+                </ram:AssociatedDocumentLineDocument>
+                <ram:SpecifiedTradeProduct>
+                    <ram:Name>{{ line.label }}</ram:Name>
+                </ram:SpecifiedTradeProduct>
+                <ram:SpecifiedLineTradeAgreement>
+                    <ram:NetPriceProductTradePrice>
+                        <ram:ChargeAmount>{{ line.unit_price_excl_tax |round(2) }}</ram:ChargeAmount>
+                    </ram:NetPriceProductTradePrice>
+                </ram:SpecifiedLineTradeAgreement>
+                <ram:SpecifiedLineTradeDelivery>
+                    <ram:BilledQuantity unitCode="C62">{{ line.quantity }}</ram:BilledQuantity>
+                </ram:SpecifiedLineTradeDelivery>
+                <ram:SpecifiedLineTradeSettlement>
+
+                    <ram:ApplicableTradeTax>
+                        <ram:TypeCode>VAT</ram:TypeCode>
+                        <ram:CategoryCode>{% if line.vat_rate >0 %}S{% else %}Z{% endif %}</ram:CategoryCode>
+                        <ram:RateApplicablePercent>{{ line.vat_rate |round(2) }}</ram:RateApplicablePercent>
+                    </ram:ApplicableTradeTax>
+
+                    <ram:SpecifiedTradeSettlementLineMonetarySummation>
+                        <ram:LineTotalAmount>{{ line.total_excl_tax |round(2) }}</ram:LineTotalAmount>
+                    </ram:SpecifiedTradeSettlementLineMonetarySummation>
+                </ram:SpecifiedLineTradeSettlement>
+            </ram:IncludedSupplyChainTradeLineItem>
+        {% endfor %}
+        {# ENTETE DE FACTURE #}
+        <ram:ApplicableHeaderTradeAgreement>
+            <ram:SellerTradeParty>  {# Vendeur #}
+                <ram:Name>{{ invoice.seller }}</ram:Name>
+                <ram:PostalTradeAddress>
+                    <ram:PostcodeCode>{{ invoice.seller.postalCode }}</ram:PostcodeCode>
+                    <ram:LineOne>{{ invoice.seller.address }}</ram:LineOne>
+                    <ram:CityName>{{ invoice.seller.city }}</ram:CityName>
+                    <ram:CountryID>{{ invoice.seller.countryCode }}</ram:CountryID>
+                </ram:PostalTradeAddress>
+                <ram:SpecifiedTaxRegistration>
+                    <ram:ID schemeID="VA">{{ invoice.seller.mwst }}</ram:ID>
+                </ram:SpecifiedTaxRegistration>
+            </ram:SellerTradeParty>
+            <ram:BuyerTradeParty>  {# Acheteur #}
+                <ram:Name>{{ invoice.customer }}</ram:Name>
+                <ram:PostalTradeAddress>
+                    <ram:PostcodeCode>{{ invoice.customer.postalCode }}</ram:PostcodeCode>
+                    <ram:LineOne>{{ invoice.customer.address }}</ram:LineOne>
+                    <ram:CityName>{{ invoice.customer.city }}</ram:CityName>
+                    <ram:CountryID>{{ invoice.customer.countryCode }}</ram:CountryID>
+                </ram:PostalTradeAddress>
+            </ram:BuyerTradeParty>
+        </ram:ApplicableHeaderTradeAgreement>
+
+        <ram:ApplicableHeaderTradeDelivery>
+            <ram:ActualDeliverySupplyChainEvent>
+                <ram:OccurrenceDateTime>
+                    <udt:DateTimeString format="102">{{ invoice.invoiceDate |date("Ymd") }}</udt:DateTimeString>
+                </ram:OccurrenceDateTime>
+            </ram:ActualDeliverySupplyChainEvent>
+        </ram:ApplicableHeaderTradeDelivery>
+        <ram:ApplicableHeaderTradeSettlement>
+            <ram:InvoiceCurrencyCode>{{ invoice.seller.currencyCode }}</ram:InvoiceCurrencyCode>
+            {% for taxdata in data.taxes %}
+                <ram:ApplicableTradeTax>
+                    <ram:CalculatedAmount>{{ taxdata.total_tax |round(2) }}</ram:CalculatedAmount>
+                    <ram:TypeCode>VAT</ram:TypeCode>
+                    <ram:BasisAmount>{{ taxdata.total_excl_tax |round(2) }}</ram:BasisAmount>
+                    <ram:CategoryCode>{% if taxdata.tax_rate > 0 %}S{% else %}Z{% endif %}</ram:CategoryCode>
+                    <ram:RateApplicablePercent>{{ taxdata.tax_rate |round(2) }}</ram:RateApplicablePercent>
+                </ram:ApplicableTradeTax>
+            {% endfor %}
+
+            {# Echéance #}
+            <ram:SpecifiedTradePaymentTerms>
+                <ram:DueDateDateTime>
+                    <udt:DateTimeString format="102">{{ invoice.duedate |date("Ymd") }}</udt:DateTimeString>
+                </ram:DueDateDateTime>
+            </ram:SpecifiedTradePaymentTerms>
+
+            {# Totaux #}
+            <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+                <ram:LineTotalAmount>{{ data.total.total_excl_tax |round(2) }}</ram:LineTotalAmount>
+                <ram:TaxBasisTotalAmount>{{ data.total.total_excl_tax |round(2) }}</ram:TaxBasisTotalAmount>
+                <ram:TaxTotalAmount
+                        currencyID="{{ invoice.seller.currencyCode }}">{{ data.total.total_taxes |round(2) }}</ram:TaxTotalAmount>
+                <ram:GrandTotalAmount>{{ data.total.total_incl_tax |round(2) }}</ram:GrandTotalAmount>
+                <ram:TotalPrepaidAmount>{{ data.total.total_paid |round(2) }}</ram:TotalPrepaidAmount>
+                <ram:DuePayableAmount>{{ data.total.total_due |round(2) }}</ram:DuePayableAmount>
+            </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        </ram:ApplicableHeaderTradeSettlement>
+    </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>

@@ -1,0 +1,19 @@
+includes:
+  - vendor/phpstan/phpstan-phpunit/extension.neon
+  - vendor/phpstan/phpstan-mockery/extension.neon
+  - vendor/phpstan/phpstan-symfony/extension.neon
+  - vendor/phpstan/phpstan-symfony/rules.neon
+  - vendor/phpstan/phpstan-doctrine/extension.neon
+
+parameters:
+  level: 5
+  paths:
+    # - /var/www/html/vendor/2le/invoice-bundle # local
+    - /builds/2le/invoicebundle #gitlab
+  excludePaths:
+    - vendor/*
+    - tests/*
+  checkMissingIterableValueType: false
+  checkGenericClassInNonGenericObjectType: false
+#  doctrine:
+#      objectManagerLoader: tests/object-manager.php
